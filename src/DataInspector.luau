@@ -146,7 +146,7 @@ local builtInRows: {RowInfo} = {
 						return nil
 					end
 					
-					s = buffer.readstring(b, offset, count)
+					s = buffer.readstring(b, offset, i)
 					if utf8.len(s) then
 						break
 					end
