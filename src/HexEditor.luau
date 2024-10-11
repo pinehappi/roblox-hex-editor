@@ -527,6 +527,7 @@ end
 function HexEditor:setBuffer(b)
 	self._buffer = b
 	self._bufferSize = buffer.len(b)
+	self._modifiedOffsets = {}
 	self:_rebuildVisibleRows(0, 0)
 end
 
