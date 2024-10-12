@@ -1809,7 +1809,14 @@ function HexEditor:refreshCells()
 		)
 		
 		for offset = start, finish do
-			self:_updateCellStyle(offset)
+			local cell = self._cells[offset]
+			if cell then
+				local asciiCode = buffer.readu8(self._buffer, offset)
+				cell.hex.Text = ("%02X"):format(asciiCode)
+				if cell.ascii then
+					cell.ascii.Text = if HexEditor.isCharacterPrintable(asciiCode) then string.char(asciiCode) else "·"
+				end
+			end
 		end
 	end
 end
