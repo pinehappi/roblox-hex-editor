@@ -39,4 +39,4 @@ local inspector = DataInspector.new(
 
 ## Contributing
 
-Contributions are welcome. If you want to contribute to the plugin, you can just send me a patch like they did in the old days. The source for the plugin is available here: [https://create.roblox.com/dashboard/creations/experiences/6658155515/overview](https://www.roblox.com/games/124668216784032/hex-editor-demo).
+Contributions are welcome. If you want to contribute to the plugin, you can just send me a patch like they did in the old days. The source for the plugin is available here: https://www.roblox.com/games/124668216784032/hex-editor-demo.
