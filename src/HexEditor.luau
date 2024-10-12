@@ -11,6 +11,9 @@ export type EditorSizing = "fillContainer" | "fillContainerY"
 export type HexEditorNewParams = {
 	container: GuiObject,
 	
+	-- Default is false.
+	readOnly: boolean?,
+	
 	-- Default is "fillContainer".
 	sizing: EditorSizing?,
 	
@@ -124,9 +127,9 @@ export type HexEditorImplementation = {
 	
 	isCharacterPrintable: (ascii: number) -> boolean,
 	
-	--[==[ Non-static ]==]
-	
 	new: (buffer, HexEditorNewParams, HexEditorDependencies) -> HexEditor,
+	
+	--[==[ Non-static ]==]
 	
 	setBuffer: (HexEditor, buffer) -> (),
 	
@@ -137,6 +140,9 @@ export type HexEditorImplementation = {
 	getRawBuffer: (HexEditor) -> (buffer, number),
 	
 	getCursorOffset: (HexEditor) -> number?,
+	
+	-- Refresh all visible cells.
+	refreshCells: (HexEditor) -> (),
 	
 	setTheme: (HexEditor, ThemeData) -> (),
 	setLayout: (HexEditor, LayoutData) -> (),
@@ -222,6 +228,8 @@ export type HexEditorFields = {
 	
 	-- Access at your own risk.
 	scrollingFrame: ScrollingFrame?,
+	
+	readOnly: boolean,
 	
 	-- Events
 	
@@ -456,6 +464,7 @@ function HexEditor.new(b: buffer, params: HexEditorNewParams, dependencies: HexE
 	
 	self._dependencies = table.freeze(dependencies)
 	self._sizing = params.sizing :: EditorSizing
+	self.readOnly = params.readOnly or false
 	
 	self._buffer = b
 	self._bufferSize = buffer.len(b)
@@ -528,6 +537,11 @@ function HexEditor:setBuffer(b)
 	self._buffer = b
 	self._bufferSize = buffer.len(b)
 	self._modifiedOffsets = {}
+	
+	if self._cursorState.offset and self._cursorState.offset > self._bufferSize then
+		self:_setCursorState(nil, self._cursorState.view :: CursorView)
+	end
+	
 	self:_rebuildVisibleRows(0, 0)
 end
 
@@ -801,6 +815,8 @@ end
 
 function HexEditor:_createHiddenTextBox()
 	if self._inModal then return end
+	if self.readOnly then return end
+	
 	if self._hiddenTextBox then
 		self:_destroyHiddenTextBox()
 	end
@@ -1612,6 +1628,9 @@ function HexEditor:_rebuildCell(offset, frame)
 	
 	if frame then
 		local column = offset % self._layout.columns
+		local isAddCell = offset == self._bufferSize
+		if isAddCell and self.readOnly then return end
+		
 		-- A cell will be rebuilt when it is modified so we don't have to worry about updating this
 
 		local cell = Instance.new("TextButton")
@@ -1630,7 +1649,6 @@ function HexEditor:_rebuildCell(offset, frame)
 			asciiCell.Parent = frame
 		end
 		
-		local isAddCell = offset == self._bufferSize
 		if isAddCell then
 			cell.Text = "+"
 			if asciiCell then
@@ -1688,7 +1706,7 @@ function HexEditor:_rebuildCell(offset, frame)
 					if self._cursorState.offset ~= offset then
 						self:_updateCellStyle(offset, "default")
 					end
-				elseif (input.UserInputType == Enum.UserInputType.MouseButton2) and self._dependencies.forms then
+				elseif (input.UserInputType == Enum.UserInputType.MouseButton2) and self._dependencies.forms and (not self.readOnly) then
 					self:_setInModal(true)
 					
 					-- Keep a copy of these because they could change in between prompting the user
@@ -1775,6 +1793,24 @@ function HexEditor:_rebuildCell(offset, frame)
 
 		self._cells[offset] = { hex = cell, ascii = asciiCell }
 		self:_updateCellStyle(offset)
+	end
+end
+
+function HexEditor:refreshCells()
+	local scrollingFrame = self.scrollingFrame
+	if scrollingFrame then
+		local start = math.max(
+			self._layout.columns * ((math.floor(scrollingFrame.CanvasPosition.Y / self._cellHeight) - 1)),
+			0
+		)
+		local finish = math.min(
+			self._layout.columns * ((math.ceil((scrollingFrame.CanvasPosition.Y + scrollingFrame.AbsoluteWindowSize.Y) / self._cellHeight) + 1)),
+			self._bufferSize
+		)
+		
+		for offset = start, finish do
+			self:_updateCellStyle(offset)
+		end
 	end
 end
 
